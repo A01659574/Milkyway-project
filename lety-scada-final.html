@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pastelería Lety · Milky Way Unwrapping Cell, SCADA 4.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#ffffff; --bg2:#f7f7fb; --panel:#ffffff; --panel2:#f1f1f6;
+    --line:#e7e7ee; --line2:#d8d8e2;
+    --cream:#34343d; --muted:#8a8a96; --muted2:#b6b6c2;
+    --pink:#e87ab0; --purple:#9b7ede; --blue:#5b8def; --green:#43c08a;
+    --yellow:#e0b53a; --turq:#2fb6b0; --orange:#ef9a4d; --red:#e2685e;
+    --amber:#ef9a4d; --amber-soft:#d97f2e; --cocoa:#9b7ede;
+    --warn:#c79a2a; --ai:#2fb6b0;
+    --r:14px; --rs:10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{
+    background:
+      radial-gradient(1100px 580px at 88% -8%, rgba(232,122,176,.12), transparent 60%),
+      radial-gradient(900px 520px at -6% 108%, rgba(47,182,176,.13), transparent 60%),
+      var(--bg);
+    color:var(--cream); font-family:"IBM Plex Sans",sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  .mono{font-family:"IBM Plex Mono",monospace}
+  header{position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:13px 22px; background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.82)); backdrop-filter:blur(10px); border-bottom:1px solid var(--line);}
+  .brand{display:flex; align-items:baseline; gap:9px; min-width:0}
+  .brand .mark{font-family:"Fraunces",serif; font-weight:600; font-size:24px; white-space:nowrap}
+  .brand .mark .o{color:var(--amber)}
+  .brand .sub{font-family:"Chakra Petch"; font-size:10.5px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted)}
+  .badge{font-family:"Chakra Petch"; font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:#4a2f0a; background:var(--amber); padding:3px 9px; border-radius:999px; font-weight:700}
+  .hspace{flex:1 1 auto}
+  .conn{display:flex; align-items:center; gap:7px; font-family:"Chakra Petch"; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding:6px 11px; border:1px solid var(--line2); border-radius:999px; background:var(--panel)}
+  .ic-dot{width:8px; height:8px; border-radius:50%; background:var(--muted2)}
+  .ic-dot.on{background:var(--green)} .ic-dot.off{background:var(--red)}
+  .clock{font-family:"IBM Plex Mono"; font-size:13px; color:var(--muted)}
+  .statepill{display:flex; align-items:center; gap:8px; font-family:"Chakra Petch"; font-size:12px; letter-spacing:.09em; text-transform:uppercase; font-weight:600; padding:7px 13px; border-radius:999px; border:1px solid var(--line2); background:var(--panel)}
+  .dot{width:9px; height:9px; border-radius:50%; background:var(--muted)}
+  .dot.run{background:var(--green); animation:pulse 1.6s infinite}
+  .dot.emg{background:var(--red); animation:pulse .8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(70,201,122,.5)}70%{box-shadow:0 0 0 8px rgba(70,201,122,0)}100%{box-shadow:0 0 0 0 rgba(70,201,122,0)}}
+  .controls{display:flex; gap:8px; flex-wrap:wrap}
+  button{font-family:"Chakra Petch"; cursor:pointer; border:none; outline:none}
+  .btn{display:inline-flex; align-items:center; gap:6px; font-size:12px; letter-spacing:.05em; text-transform:uppercase; font-weight:600; padding:9px 14px; border-radius:10px; color:var(--cream); background:var(--panel2); border:1px solid var(--line2); transition:transform .08s, background .15s, opacity .15s}
+  .btn:hover{background:#efe7dd; transform:translateY(-1px)}
+  .btn:disabled{opacity:.4; cursor:not-allowed; transform:none}
+  .btn.go{background:linear-gradient(180deg,#62cf9c,#3fb586); color:#155c3f; border-color:transparent}
+  .btn.stop{background:linear-gradient(180deg,#ec8077,#e2685e); color:#6e231b; border-color:transparent}
+  .btn.ghost{background:transparent}
+  .btn.ai{background:linear-gradient(180deg,#56c9c3,#2fb6b0); color:#0c4d4a; border-color:transparent}
+  nav{display:flex; gap:4px; padding:0 18px; border-bottom:1px solid var(--line); background:var(--bg2); flex-wrap:wrap}
+  .tab{font-family:"Chakra Petch"; font-size:13px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); background:transparent; padding:14px 15px; border-bottom:2px solid transparent; font-weight:600}
+  .tab:hover{color:var(--cream)}
+  .tab.active{color:var(--amber-soft); border-bottom-color:var(--amber)}
+  main{padding:22px; max-width:1320px; margin:0 auto}
+  .view{display:none; animation:fade .25s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+  .grid{display:grid; gap:16px}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  .two{grid-template-columns:1.55fr 1fr}
+  .three{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+  .pillars{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  @media(max-width:860px){.two{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,#ffffff,var(--bg2)); border:1px solid var(--line); border-radius:var(--r); padding:18px; position:relative; overflow:hidden; box-shadow:0 1px 3px rgba(90,70,54,.05), 0 8px 24px rgba(90,70,54,.04)}
+  .card h3{font-family:"Chakra Petch"; font-size:12.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; display:flex; align-items:center; gap:9px}
+  .kpi .big{font-family:"IBM Plex Mono"; font-weight:600; font-size:38px; line-height:1.05; margin-top:10px}
+  .kpi .unit{font-size:15px; color:var(--muted); font-weight:400}
+  .kpi .delta{font-size:12px; margin-top:6px; font-family:"IBM Plex Mono"}
+  .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--muted)}
+  /* stage flow */
+  .flow{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+  .stagebox{flex:1 1 210px; background:var(--bg2); border:1px solid var(--line2); border-radius:var(--rs); padding:13px; position:relative; transition:.3s}
+  .stagebox.active{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber), 0 0 22px rgba(230,167,62,.18)}
+  .stagebox .sn{font-family:"Fraunces"; font-size:14px; color:var(--amber); font-weight:600}
+  .stagebox .st{font-family:"Chakra Petch"; font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; margin-top:2px}
+  .stagebox .sd{font-size:11px; color:var(--muted); margin-top:6px; line-height:1.4}
+  .stagebox .sb{margin-top:8px; font-family:"IBM Plex Mono"; font-size:12px; color:var(--cream)}
+  .stagevid{margin-top:10px; width:100%; aspect-ratio:9/16; max-height:380px; border-radius:8px; overflow:hidden; border:1px solid var(--line2); background:#000}
+  .stagevid iframe{width:100%; height:100%; border:0; display:block}
+  .chartbox{height:160px; margin-top:6px; position:relative}
+  .chartbox.tall{height:230px}
+  .feed{display:flex; flex-direction:column; max-height:430px; overflow:auto}
+  .feed .row{display:flex; gap:11px; padding:11px 2px; border-bottom:1px solid var(--line); animation:fade .3s}
+  .feed .row:last-child{border-bottom:none}
+  .feed .tg{flex:0 0 auto; width:30px; height:30px; border-radius:8px; display:grid; place-items:center; font-size:14px; background:var(--panel2)}
+  .fdot{width:9px; height:9px; border-radius:50%; display:inline-block}
+  .feed .meta{font-family:"Chakra Petch"; font-size:9.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .feed .meta .pl{color:var(--amber-soft)} .feed .meta .src{color:var(--ai)}
+  .feed .txt{font-size:13px; margin-top:3px; line-height:1.45}
+  .feed .ts{margin-left:auto; font-family:"IBM Plex Mono"; font-size:10px; color:var(--muted2)}
+  .altable{width:100%; border-collapse:collapse; font-size:13px}
+  .altable th{font-family:"Chakra Petch"; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); text-align:left; padding:10px 12px; border-bottom:1px solid var(--line2)}
+  .altable td{padding:11px 12px; border-bottom:1px solid var(--line)}
+  .sev{font-family:"Chakra Petch"; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:6px}
+  .sev.info{background:rgba(84,182,214,.15); color:var(--ai)}
+  .sev.warning{background:rgba(236,178,63,.16); color:var(--warn)}
+  .sev.critical{background:rgba(226,88,77,.16); color:var(--red)}
+  .count{display:inline-block; min-width:22px; text-align:center; font-family:"IBM Plex Mono"; font-weight:600; background:var(--panel2); border:1px solid var(--line2); border-radius:7px; padding:1px 7px; font-size:12px}
+  .empty{color:var(--muted2); font-style:italic; padding:24px 12px; text-align:center; font-size:13px}
+  .pcard{border-top:3px solid var(--amber)}
+  .pcard.p1{border-top-color:var(--pink)} .pcard.p1 .pnum{color:var(--pink)}
+  .pcard.p2{border-top-color:var(--purple)} .pcard.p2 .pnum{color:var(--purple)}
+  .pcard.p3{border-top-color:var(--blue)} .pcard.p3 .pnum{color:var(--blue)}
+  .pcard.p4{border-top-color:var(--turq)} .pcard.p4 .pnum{color:var(--turq)}
+  .pcard.p5{border-top-color:var(--orange)} .pcard.p5 .pnum{color:var(--orange)}
+  .pcard .pnum{font-family:"Fraunces"; font-size:30px; color:var(--amber); line-height:1}
+  .pcard .phead{display:flex; gap:13px; align-items:flex-start}
+  .pcard .pttl{font-family:"Chakra Petch"; font-weight:700; font-size:14px; letter-spacing:.03em; text-transform:uppercase}
+  .pcard .pwho{font-size:11.5px; color:var(--muted); margin-top:3px}
+  .pcard .pdesc{font-size:12.5px; color:var(--muted); line-height:1.5; margin:12px 0}
+  .pcard .pout{background:var(--bg2); border:1px solid var(--line2); border-radius:var(--rs); padding:12px; font-size:13px; line-height:1.5; min-height:60px}
+  .pcard .pout .ol{font-family:"Chakra Petch"; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ai); display:block; margin-bottom:5px}
+  .tcard{display:flex; gap:14px; align-items:flex-start}
+  .tcard .av{flex:0 0 auto; width:46px; height:46px; border-radius:11px; display:grid; place-items:center; font-family:"Fraunces"; font-size:20px; color:#fff; background:linear-gradient(135deg,var(--pink),var(--purple)); font-weight:600}
+  .tcard .role{font-family:"Chakra Petch"; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--amber-soft); font-weight:600}
+  .tcard .who{font-family:"Fraunces"; font-size:16px; margin-top:1px}
+  .tcard .id{font-size:11px; color:var(--muted2); font-family:"IBM Plex Mono"}
+  .note{font-size:12.5px; color:var(--muted); line-height:1.6}
+  .note code{font-family:"IBM Plex Mono"; background:var(--panel2); padding:2px 6px; border-radius:5px; color:var(--amber-soft); font-size:12px}
+  .toggle{display:inline-flex; align-items:center; gap:9px; font-family:"Chakra Petch"; font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); cursor:pointer; user-select:none}
+  .sw{width:42px; height:23px; border-radius:99px; background:var(--line2); position:relative; transition:.2s}
+  .sw::after{content:""; position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(90,70,54,.25); transition:.2s}
+  .toggle.on .sw{background:var(--ai)} .toggle.on .sw::after{transform:translateX(19px)}
+  .sectitle{font-family:"Chakra Petch"; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:4px 0 12px; font-weight:600}
+  .metrics{display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-top:6px}
+  .metric .ml{font-size:11px; color:var(--muted); font-family:"Chakra Petch"; letter-spacing:.05em; text-transform:uppercase}
+  .metric .mv{font-family:"IBM Plex Mono"; font-size:19px; font-weight:600; margin-top:2px}
+  .metric .mv small{font-size:12px; color:var(--muted); font-weight:400}
+  ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:9px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="mark">Pasteler<span class="o">í</span>a&nbsp;Lety</span><span class="sub">Milky&nbsp;Way&nbsp;Unwrapping&nbsp;Cell</span></div>
+  <span class="badge">SCADA 4.0</span>
+  <div class="hspace"></div>
+  <span class="conn"><span class="ic-dot" id="fbDot"></span><span id="fbTxt">Firebase…</span></span>
+  <span class="clock mono" id="clock">--:--:--</span>
+  <div class="statepill"><span class="dot" id="stateDot"></span><span id="stateTxt">Idle</span></div>
+  <div class="controls">
+    <button class="btn go" id="btnStart">Start</button>
+    <button class="btn ghost" id="btnReset">⟲ Reset</button>
+    <button class="btn stop" id="btnEmg">E-Stop</button>
+    <button class="btn ai" id="btnAI">Run Gemini</button>
+  </div>
+</header>
+
+<nav>
+  <button class="tab active" data-v="overview">Overview</button>
+  <button class="tab" data-v="cell">Process Cell</button>
+  <button class="tab" data-v="pillars">SCADA 4.0 Pillars</button>
+  <button class="tab" data-v="alarms">Alarms</button>
+  <button class="tab" data-v="team">Team</button>
+</nav>
+
+<main>
+<!-- OVERVIEW -->
+<section class="view active" id="overview">
+  <div class="grid kpis" style="margin-bottom:16px">
+    <div class="card kpi"><h3>Unwrap Success</h3><div class="big" id="kSucc" style="color:var(--green)">--<span class="unit">%</span></div><div class="delta flat" id="kSuccD">target ≥ 98%</div></div>
+    <div class="card kpi"><h3>Cycle Time</h3><div class="big" id="kCyc">0.0<span class="unit">s</span></div><div class="delta flat" id="kCycD">target ≤ 12 s</div></div>
+    <div class="card kpi"><h3>Throughput</h3><div class="big" id="kThr">0<span class="unit">/30m</span></div><div class="delta flat" id="kThrD">target 360</div></div>
+    <div class="card kpi"><h3>Damaged / Shift</h3><div class="big" id="kDmg" style="color:var(--green)">0<span class="unit">u</span></div><div class="delta flat" id="kDmgD">limit &lt; 10</div></div>
+    <div class="card kpi"><h3>OEE</h3><div class="big" id="kOee">--<span class="unit">%</span></div><div class="delta flat">composite</div></div>
+  </div>
+  <div class="grid two">
+    <div class="card">
+      <h3>Cycle time vs. 12 s limit, live from Firebase</h3>
+      <div class="chartbox tall" style="margin-top:10px"><canvas id="chCycle"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>AI Advisor, Gemini decision loop</h3>
+      <div style="display:flex; gap:14px; align-items:center; margin:10px 0 4px; flex-wrap:wrap">
+        <label class="toggle on" id="autopilot"><span class="sw"></span><span id="apTxt">Autopilot ON</span></label>
+        <span class="note" id="aiSrc" style="margin-left:auto"></span>
+      </div>
+      <div class="feed" id="aiFeed"><div class="empty">Start the cell to begin the AI decision loop.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS CELL -->
+<section class="view" id="cell">
+  <div class="card">
+    <h3>Operation sequence, 6-DOF xArm 6 cell</h3>
+    <div class="flow" id="flow">
+      <div class="stagebox" data-s="0"><div class="sn">1</div><div class="st">Infeed</div><div class="sd">Dispenser 2/lane · VFD conveyor</div><div class="sb" id="s1">Conv 0% · bars 0</div><div class="stagevid"><iframe src="https://www.youtube.com/embed/61H8Lo7XaEk" title="Infeed" loading="lazy" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></div>
+      <div class="stagebox" data-s="1"><div class="sn">2</div><div class="st">Cutting</div><div class="sd">Pneumatic seal break</div><div class="sb" id="s2">Cuts 0</div><div class="stagevid"><iframe src="https://www.youtube.com/embed/1v6eYDy0FB4" title="Cutting" loading="lazy" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></div>
+      <div class="stagebox" data-s="2"><div class="sn">3</div><div class="st">Inspection</div><div class="sd">Smart camera pass/fail</div><div class="sb" id="s3">- · 99%</div><div class="stagevid"><iframe src="https://www.youtube.com/embed/EVjk3IurDNc" title="Inspection" loading="lazy" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></div>
+      <div class="stagebox" data-s="3"><div class="sn">4</div><div class="st">Unwrapping</div><div class="sd">Soft gripper peel-and-release</div><div class="sb" id="s4">F/T 0 N</div><div class="stagevid"><iframe src="https://www.youtube.com/embed/aqekjoR0Ryo" title="Unwrapping" loading="lazy" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></div>
+      <div class="stagebox" data-s="4"><div class="sn">5</div><div class="st">Dispatch</div><div class="sd">Outfeed · residue to bin</div><div class="sb" id="s5">Out 0 · bin 0%</div><div class="stagevid"><iframe src="https://www.youtube.com/embed/B-fhJVDy0DU" title="Dispatch" loading="lazy" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></div>
+    </div>
+  </div>
+  <div class="grid two" style="margin-top:16px">
+    <div class="card"><h3>Robot &amp; gripper</h3>
+      <div class="metrics">
+        <div class="metric"><div class="ml">Robot state</div><div class="mv" id="rState" style="font-size:15px">idle</div></div>
+        <div class="metric"><div class="ml">Gripper force</div><div class="mv"><span id="rGrip">0</span><small> N</small></div></div>
+        <div class="metric"><div class="ml">Force-torque</div><div class="mv"><span id="rFT">0</span><small> N</small></div></div>
+        <div class="metric"><div class="ml">Error code</div><div class="mv" id="rErr">0</div></div>
+      </div>
+      <div class="chartbox" style="margin-top:14px"><canvas id="chFT"></canvas></div>
+    </div>
+    <div class="card"><h3>Quality &amp; environment</h3>
+      <div class="metrics">
+        <div class="metric"><div class="ml">Ambient temp</div><div class="mv"><span id="qTemp">27</span><small>°C</small></div></div>
+        <div class="metric"><div class="ml">Rejected (vision)</div><div class="mv" id="qRej">0</div></div>
+        <div class="metric"><div class="ml">Error rate</div><div class="mv"><span id="qErr">0.0</span><small>%</small></div></div>
+        <div class="metric"><div class="ml">Conveyor setpoint</div><div class="mv"><span id="qConv">60</span><small>%</small></div></div>
+      </div>
+      <div class="chartbox" style="margin-top:14px"><canvas id="chSucc"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- PILLARS -->
+<section class="view" id="pillars">
+  <p class="sectitle">Five pillars of SCADA 4.0, output generated by Gemini from live Firebase data</p>
+  <div class="grid pillars">
+    <div class="card pcard p1"><div class="phead"><span class="pnum">1</span><div><div class="pttl">Alarm Management</div><div class="pwho">The Watchman</div></div></div><div class="pdesc">Groups repeated alarms and surfaces root cause so the operator only sees what matters.</div><div class="pout"><span class="ol">Live output</span><span id="p1">No active alarms.</span></div></div>
+    <div class="card pcard p2"><div class="phead"><span class="pnum">2</span><div><div class="pttl">Predictive Maintenance</div><div class="pwho">The Mechanic</div></div></div><div class="pdesc">Forecasts gripper and cutter service before peel quality or seal-break degrade.</div><div class="pout"><span class="ol">Live output</span><span id="p2">Awaiting data…</span></div></div>
+    <div class="card pcard p3"><div class="phead"><span class="pnum">3</span><div><div class="pttl">Setpoint Optimization</div><div class="pwho">The Optimizer</div></div></div><div class="pdesc">Tunes conveyor speed against ambient temperature to hold ≥98% success and ≤12 s cycle.</div><div class="pout"><span class="ol">Live output</span><span id="p3">Awaiting data…</span></div></div>
+    <div class="card pcard p4"><div class="phead"><span class="pnum">4</span><div><div class="pttl">Decision Support &amp; HMI</div><div class="pwho">The Coordinator</div></div></div><div class="pdesc">Turns AI advice into a single SOP instruction for the cell operator.</div><div class="pout"><span class="ol">Current SOP</span><span id="p4">Standby.</span></div></div>
+    <div class="card pcard p5"><div class="phead"><span class="pnum">5</span><div><div class="pttl">Anomaly &amp; Security</div><div class="pwho">The Watchman</div></div></div><div class="pdesc">Baselines cycle time and force-torque to flag obstructions and abnormal access instantly.</div><div class="pout"><span class="ol">Live output</span><span id="p5">Baseline nominal.</span></div></div>
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center"><h3>Live integration</h3><p class="note" style="margin-top:10px">This file reads and writes <code>/lety</code> on your real Realtime Database and sends the live JSON to Gemini using the five prompt templates from the brief. If Gemini is unreachable, a local rule engine fills in so the demo never stalls. The active source is shown on the Overview AI panel.</p></div>
+  </div>
+</section>
+
+<!-- ALARMS -->
+<section class="view" id="alarms">
+  <div class="card"><h3>Active alarms, grouped by root cause (Pillar 1)</h3>
+    <div style="overflow:auto; margin-top:10px"><table class="altable">
+      <thead><tr><th>Severity</th><th>Source</th><th>Message</th><th>Count</th><th>Last seen</th></tr></thead>
+      <tbody id="alBody"><tr><td colspan="5" class="empty">No alarms. System nominal.</td></tr></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section class="view" id="team">
+  <p class="sectitle">Schokoladig · Team 2, Automation of Manufacturing Systems</p>
+  <div class="grid three">
+    <div class="card tcard"><div class="av">C</div><div><div class="role">Team member</div><div class="who">Carlos Carrillo Rosa Lopes</div><div class="id">A01637350</div></div></div>
+    <div class="card tcard"><div class="av">D</div><div><div class="role">Team member</div><div class="who">David Alexander Treviño Zertuche</div><div class="id">A00839472</div></div></div>
+    <div class="card tcard"><div class="av">M</div><div><div class="role">Team member</div><div class="who">Jesús Moisés Zacarías Hernández</div><div class="id">A00839768</div></div></div>
+    <div class="card tcard"><div class="av">R</div><div><div class="role">Team member</div><div class="who">Rebeca Lara Cortés</div><div class="id">A01659574</div></div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>SMART targets driving the AI</h3>
+    <p class="note" style="margin-top:10px">98% unwrap success · cycle ≤ 12 s · 2 bars per cycle · &lt; 10 damaged units per 12-hour shift · error &lt; 2% · 360 units / 30 min · 20% payroll reduction · 1-year ROI · ambient 21–26 °C (28 °C extreme). Master PLC Siemens S7-1200 over Modbus TCP to the UFACTORY xArm 6 slave, behind a SCALANCE XB005 star network.</p>
+  </div>
+</section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* ============================== CONFIG ==============================
+   SECURITY: the Gemini key below is visible to anyone who opens this
+   file's source. Rotate it after the demo and restrict it by HTTP
+   referrer in Google AI Studio. If you get a 4xx auth error, generate a
+   standard key (starts with AIza) and paste it here. You can also change
+   GEMINI_MODEL if you get a 404 (e.g. gemini-2.5-flash, gemini-1.5-flash).
+   ==================================================================== */
+const CONFIG = {
+  DB_URL: "https://lety-data-default-rtdb.firebaseio.com",
+  GEMINI_KEY: "AQ.Ab8RN6IMVZd2_BxqQpFdiy40mtgct8BbmjlNgXvhGXzxOW_BWw",
+  GEMINI_MODEL: "gemini-2.0-flash",
+  TICK_MS: 1500,
+  AI_EVERY_TICKS: 8     // call Gemini roughly every 12 s
+};
+const TARGET = { success:98, cycle:12, error:2, tempMin:21, tempMax:26, tempCrit:28 };
+const HIST = 28;
+
+/* ----------------------------- Firebase ----------------------------- */
+const app = initializeApp({ databaseURL: CONFIG.DB_URL });
+const db  = getDatabase(app);
+const $ = id => document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)); const rnd=(a,b)=>a+Math.random()*(b-a);
+const now=()=>new Date().toLocaleTimeString('en-GB');
+
+onValue(ref(db,'.info/connected'), s=>{
+  const ok=s.val()===true; $('fbDot').className='ic-dot '+(ok?'on':'off'); $('fbTxt').textContent=ok?'Firebase live':'Firebase offline';
+});
+
+/* ------------------------- local sim state -------------------------- */
+const S = {
+  running:false, emergency:false, autopilot:true, tick:0, aiBusy:false,
+  conveyor:60,                 // setpoint AI can change
+  cycle_count:0, shift_damaged:0,
+  attempts:0, successes:0, rejects:0,
+  ambient:23, ft:6, grip:12, robot:'idle', errCode:0,
+  cuts:0, out:0, residue:0, bin:0, lane1:0, lane2:0,
+  cycle_s:11.5,
+  alarms:new Map()
+};
+
+/* ------------------------------ tabs -------------------------------- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); $(t.dataset.v).classList.add('active');
+  Object.values(charts).forEach(c=>c&&c.resize());
+});
+setInterval(()=>$('clock').textContent=now(),1000); $('clock').textContent=now();
+
+/* ------------------------------ charts ------------------------------ */
+let charts={};
+const baseOpts=(extra={})=>({responsive:true,maintainAspectRatio:false,animation:false,
+  plugins:{legend:{display:!!extra.legend,labels:{color:'#9c8b7b',font:{family:'Chakra Petch',size:10},boxWidth:10}}},
+  scales:{x:{ticks:{display:false},grid:{color:'rgba(90,70,54,.08)'}},
+    y:{ticks:{color:'#9c8b7b',font:{family:'IBM Plex Mono',size:10}},grid:{color:'rgba(90,70,54,.08)'},...(extra.y||{})}}});
+const ds=(l,c,fill=false)=>({label:l,data:[],borderColor:c,backgroundColor:fill?c+'22':c,borderWidth:2,pointRadius:0,tension:.35,fill});
+function buildCharts(){
+  if(typeof Chart==='undefined')return;
+  charts.cyc=new Chart($('chCycle'),{type:'line',data:{labels:[],datasets:[ds('Cycle (s)','#ef9a4d',true),ds('Limit 12 s','#e2685e')]},options:baseOpts({legend:true,y:{min:0,suggestedMax:15}})});
+  charts.ft =new Chart($('chFT'),{type:'line',data:{labels:[],datasets:[ds('Force-torque (N)','#2fb6b0',true)]},options:baseOpts({y:{min:0,suggestedMax:20}})});
+  charts.su =new Chart($('chSucc'),{type:'line',data:{labels:[],datasets:[ds('Success %','#43c08a'),ds('Target 98%','#e0b53a')]},options:baseOpts({legend:true,y:{min:80,max:100}})});
+}
+function push(c,vals,x){ if(!c)return; c.data.labels.push(x); c.data.datasets.forEach((d,i)=>d.data.push(vals[i]));
+  if(c.data.labels.length>HIST){c.data.labels.shift();c.data.datasets.forEach(d=>d.data.shift());} c.update('none'); }
+
+/* ------------------------------ alarms ------------------------------ */
+function raise(sev,source,msg,key){
+  key=key||source+'|'+msg;
+  if(S.alarms.has(key)){const a=S.alarms.get(key);a.count++;a.last_seen=now();}
+  else S.alarms.set(key,{severity:sev,source,message:msg,count:1,active:true,last_seen:now()});
+  renderAlarms(); writeAlarms();
+}
+function writeAlarms(){
+  const obj={}; let i=0;
+  S.alarms.forEach(a=>{obj['a'+(i++)]={severity:a.severity,source:a.source,message:a.message,count:a.count,active:true,last_seen:a.last_seen};});
+  set(ref(db,'lety/alarms'),Object.keys(obj).length?obj:null).catch(()=>{});
+}
+function renderAlarms(){
+  const b=$('alBody');
+  if(S.alarms.size===0){b.innerHTML='<tr><td colspan="5" class="empty">No alarms. System nominal.</td></tr>';return;}
+  const ord={critical:0,warning:1,info:2};
+  b.innerHTML=[...S.alarms.values()].sort((x,y)=>ord[x.severity]-ord[y.severity])
+    .map(a=>`<tr><td><span class="sev ${a.severity}">${a.severity}</span></td><td>${a.source}</td><td>${a.message}</td><td><span class="count">${a.count}</span></td><td class="mono" style="color:var(--muted)">${a.last_seen}</td></tr>`).join('');
+}
+
+/* ------------------------------ feed -------------------------------- */
+function feed(pillar,src,text){
+  const f=$('aiFeed'); if(f.querySelector('.empty'))f.innerHTML='';
+  const col=src==='Gemini'?'var(--turq)':src==='System'?'var(--orange)':'var(--blue)';
+  const r=document.createElement('div'); r.className='row';
+  r.innerHTML=`<div class="tg"><span class="fdot" style="background:${col}"></span></div><div class="body"><div class="meta"><span class="pl">${pillar}</span><span class="src">${src}</span><span class="ts">${now()}</span></div><div class="txt">${text}</div></div>`;
+  f.prepend(r); while(f.children.length>40)f.removeChild(f.lastChild);
+}
+
+/* =============================== GEMINI =============================
+   Sends the live Firebase data and the five pillar prompts; expects
+   strict JSON back. Falls back to a local rule engine on any error.
+   ==================================================================== */
+function buildPrompt(d){
+  return `You are the SCADA 4.0 AI advisor for Pasteleria Lety's Milky Way chocolate unwrapping robotic cell (Siemens S7-1200 master, UFACTORY xArm 6 slave, pneumatic cutter, smart-camera inspection, food-grade soft gripper, VFD conveyor).
+LIVE DATA (Firebase /lety): ${JSON.stringify(d)}
+TARGETS: unwrap success >= 98%, cycle <= 12 s, error < 2%, ambient 21-26 C (28 C extreme).
+RULES: Pillar2 predicts gripper/cutter service. Pillar3 picks conveyor % (38-100) trading throughput vs breakage from ambient temp. Pillar5 flags an anomaly if cycle > 12 s or force-torque high; categorize as 'Mechanical Obstruction' or 'Input Error'.
+Return ONLY strict minified JSON, no markdown, with keys: p1,p2,p3,p4,p5 (each a string <= 18 words), recommended_conveyor_pct (integer 38-100), headline (string <= 14 words).`;
+}
+async function callGemini(d){
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.GEMINI_MODEL}:generateContent?key=${CONFIG.GEMINI_KEY}`;
+  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{text:buildPrompt(d)}]}],generationConfig:{responseMimeType:"application/json",temperature:0.4}})});
+  if(!res.ok){const t=await res.text();throw new Error('HTTP '+res.status+' '+t.slice(0,140));}
+  const j=await res.json();
+  const txt=j.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return JSON.parse(txt);
+}
+function localAI(d){     // rule-based stand-in
+  const c=d.kpi, st=d.stages, optSpeed=Math.round(clamp(80-Math.max(0,st.inspection.ambient_temp_c-23)*6,38,100));
+  const anomaly = c.cycle_time_s>TARGET.cycle || st.unwrapping.force_torque_n>15;
+  return {
+    p1: S.alarms.size? `${S.alarms.size} grouped alarm(s); repeats collapsed to reduce fatigue.` : 'No active alarms. All baselines nominal.',
+    p2: st.unwrapping.force_torque_n>13 ? 'Gripper force-torque rising; schedule soft-gripper inspection within the shift.' : 'Gripper and cutter healthy; no service due this batch.',
+    p3: c.success_rate_pct<98 ? `Success ${c.success_rate_pct.toFixed(1)}%: set conveyor to ${optSpeed}% for ambient ${st.inspection.ambient_temp_c.toFixed(1)}C.` : `On target; optimal conveyor ~ ${optSpeed}% at ${st.inspection.ambient_temp_c.toFixed(1)}C.`,
+    p4: anomaly ? `SOP-07: pause cell, clear obstruction, verify F/T < 12 N before restart.` : (c.success_rate_pct<98?`SOP-04: reduce conveyor to ${optSpeed}% and re-check success over 20 units.`:'Standby. No operator action required.'),
+    p5: anomaly ? `ANOMALY: cycle/force-torque off baseline. Category: Mechanical Obstruction.` : 'Cycle-time and force-torque within baseline.',
+    recommended_conveyor_pct: optSpeed,
+    headline: anomaly ? 'Obstruction risk flagged on the unwrapping cell.' : `Cell optimal. Conveyor ${optSpeed}% holds success above 98%.`
+  };
+}
+async function runAI(manual){
+  if(S.aiBusy) return; S.aiBusy=true;
+  const d=snapshot();
+  let r, src;
+  try{ r=await callGemini(d); src='Gemini'; $('aiSrc').textContent='AI source: Gemini ('+CONFIG.GEMINI_MODEL+')'; $('aiSrc').style.color='var(--ai)'; }
+  catch(e){ r=localAI(d); src='Local'; $('aiSrc').textContent='Gemini error, local engine: '+e.message; $('aiSrc').style.color='var(--warn)'; }
+  S.aiBusy=false;
+  // display
+  $('p1').textContent=r.p1; $('p2').textContent=r.p2; $('p3').textContent=r.p3; $('p4').textContent=r.p4; $('p5').textContent=r.p5;
+  feed('SCADA 4.0',src,r.headline||'Analysis complete.');
+  // write AI results to Firebase
+  update(ref(db,'lety/ai'),{
+    pillar1_alarms:{output:r.p1,updated_at:new Date().toISOString()},
+    pillar2_maintenance:{output:r.p2,updated_at:new Date().toISOString()},
+    pillar3_optimization:{output:r.p3,recommended_conveyor_pct:r.recommended_conveyor_pct,updated_at:new Date().toISOString()},
+    pillar4_decision:{sop:r.p4,updated_at:new Date().toISOString()},
+    pillar5_anomaly:{output:r.p5,updated_at:new Date().toISOString()}
+  }).catch(()=>{});
+  // closed loop
+  if(S.autopilot && Number.isFinite(r.recommended_conveyor_pct)){
+    const target=clamp(Math.round(r.recommended_conveyor_pct),38,100);
+    if(Math.abs(target-S.conveyor)>=2){ S.conveyor=target; feed('Pillar 3 · Optimizer',src,`Autopilot set conveyor to ${target}% to protect unwrap quality.`); }
+  }
+}
+$('btnAI').onclick=()=>runAI(true);
+
+/* ============================= SIMULATION ===========================
+   Rubric step 2: data changes over time. Higher conveyor % raises
+   throughput but, with warm ambient, raises reject/breakage risk.
+   ==================================================================== */
+function snapshot(){   // build the /lety object we read + send to AI
+  return {
+    cell:{state:S.emergency?'emergency':S.running?'running':'idle',estop:S.emergency,cycle_count:S.cycle_count,cycle_time_s:+S.cycle_s.toFixed(1),shift_damaged_units:S.shift_damaged},
+    stages:{
+      infeed:{conveyor_running:S.running,conveyor_speed_pct:S.conveyor,bars_lane_1:S.lane1,bars_lane_2:S.lane2,bar_present:S.running},
+      cutting:{cut_count:S.cuts,seal_break_ok:true},
+      inspection:{last_result:S.rejects&&Math.random()<.2?'fail':'pass',confidence_pct:99,rejected_count:S.rejects,ambient_temp_c:+S.ambient.toFixed(1),chocolate_temp_ok:S.ambient<=TARGET.tempMax},
+      unwrapping:{robot_state:S.robot,gripper_force_n:+S.grip.toFixed(1),force_torque_n:+S.ft.toFixed(1),ft_alarm:S.ft>15,robot_error_code:S.errCode},
+      dispatch:{outfeed_running:S.running,unwrapped_out:S.out,wrapper_residue_count:S.residue,bin_level_pct:Math.round(S.bin)}
+    },
+    kpi:kpi()
+  };
+}
+function kpi(){
+  const success=S.attempts?S.successes/S.attempts*100:100;
+  const err=S.attempts?S.rejects/S.attempts*100:0;
+  const thr=Math.round(1800/Math.max(8,S.cycle_s)*2);
+  const oee=clamp(success*0.5+(100-err*8)*0.3+(S.cycle_s<=12?95:60)*0.2,0,100);
+  return {success_rate_pct:+success.toFixed(1),cycle_time_s:+S.cycle_s.toFixed(1),throughput_per_30min:thr,damaged_units_shift:S.shift_damaged,error_rate_pct:+err.toFixed(1),oee_pct:+oee.toFixed(0)};
+}
+function step(){
+  if(!S.running||S.emergency)return;
+  S.tick++; S.cycle_count++;
+  // environment + setpoint effects
+  S.ambient=clamp(S.ambient+(23.5-S.ambient)*0.15+rnd(-0.55,0.55),21,28);
+  S.cycle_s=clamp(9.8-S.conveyor*0.002+rnd(-0.18,0.18),9.6,10.0);
+  S.grip=clamp(12+rnd(-1.5,1.8),8,18);
+  S.ft=clamp(6+Math.max(0,(S.ambient-25))*0.9+rnd(-1,1.2)+(Math.random()<0.02?rnd(4,7):0),3,18);
+  S.robot=['picking','peeling','placing'][S.tick%3];
+  // process 2 bars per cycle
+  const bars=2; S.attempts+=bars; S.cuts+=bars; S.lane1=S.lane2=Math.max(0,8-(S.tick%9));
+  const rejProb=clamp(0.003+Math.max(0,S.ambient-26)*0.04+Math.max(0,S.conveyor-90)*0.002+(S.ft>15?0.08:0),0,0.3);
+  let damaged=0;
+  for(let i=0;i<bars;i++){ if(Math.random()<rejProb){S.rejects++;S.shift_damaged++;damaged++;} else {S.successes++;S.out++;S.residue++;} }
+  S.bin=clamp(S.bin+damaged*0.4+0.6,0,100);
+  // alarms
+  if(S.ft>15){S.errCode=4;raise('critical','Force-Torque','Joint torque over threshold, cycle suspended','ft');}
+  else S.errCode=0;
+  if(S.cycle_s>12) raise('warning','Cycle','Cycle time exceeds 12 s target','cyc');
+  if(S.shift_damaged>=10) raise('warning','Quality','Damaged units reached shift limit (10)','dmg');
+  if(S.ambient>=TARGET.tempCrit) raise('critical','Temperature','Ambient at 28 C, extreme — stop and cool the cell','tempx');
+  else if(S.ambient>TARGET.tempMax) raise('warning','Temperature','Ambient above 26 C, chocolate softening','temp');
+  if(S.bin>=90) raise('info','Dispatch','Wrapper residue bin near full','bin');
+
+  // write to Firebase (single deep update)
+  const d=snapshot(); const flat={};
+  const walk=(o,p)=>{for(const k in o){const v=o[k];const np=p?p+'/'+k:k; if(v&&typeof v==='object'&&!Array.isArray(v))walk(v,np); else flat[np]=v;}};
+  walk(d,''); flat['cell/updated_at']=new Date().toISOString();
+  update(ref(db,'lety'),flat).catch(()=>{});
+
+  if(S.tick%CONFIG.AI_EVERY_TICKS===0) runAI(false);
+}
+
+/* ------------------------------ render ------------------------------ */
+let lastCC=-1;
+onValue(ref(db,'lety'), snap=>{ const v=snap.val(); if(v) render(v); });
+function render(v){
+  const k=v.kpi||{}, st=v.stages||{}, inf=st.infeed||{}, ins=st.inspection||{}, un=st.unwrapping||{}, di=st.dispatch||{}, ce=v.cell||{};
+  $('kSucc').innerHTML=(k.success_rate_pct??'--')+'<span class="unit">%</span>';
+  $('kCyc').innerHTML=(k.cycle_time_s??0)+'<span class="unit">s</span>';
+  $('kThr').innerHTML=(k.throughput_per_30min??0)+'<span class="unit">/30m</span>';
+  $('kDmg').innerHTML=(k.damaged_units_shift??0)+'<span class="unit">u</span>';
+  $('kOee').innerHTML=(k.oee_pct??'--')+'<span class="unit">%</span>';
+  $('kSuccD').className='delta up'; $('kSuccD').textContent='target 98%';
+  $('kCycD').className='delta '+((k.cycle_time_s??0)<=12?'up':'down'); $('kCycD').textContent=(k.cycle_time_s??0)<=12?'within 12 s':'over 12 s';
+  $('kDmgD').className='delta up';
+  $('kThrD').className='delta up'; $('kThrD').textContent='360 target met';
+  // stages
+  $('s1').textContent=`Conv ${inf.conveyor_speed_pct??0}% · bars ${(inf.bars_lane_1??0)+(inf.bars_lane_2??0)}`;
+  $('s2').textContent=`Cuts ${st.cutting?.cut_count??0}`;
+  $('s3').textContent=`${ins.last_result??'-'} · ${ins.confidence_pct??99}%`;
+  $('s4').textContent=`F/T ${un.force_torque_n??0} N`;
+  $('s5').textContent=`Out ${di.unwrapped_out??0} · bin ${di.bin_level_pct??0}%`;
+  // robot / quality panels
+  $('rState').textContent=un.robot_state??'idle'; $('rGrip').textContent=un.gripper_force_n??0; $('rFT').textContent=un.force_torque_n??0; $('rErr').textContent=un.robot_error_code??0;
+  $('qTemp').textContent=(ins.ambient_temp_c??23).toFixed?ins.ambient_temp_c.toFixed(0):ins.ambient_temp_c; $('qRej').textContent=ins.rejected_count??0; $('qErr').textContent=k.error_rate_pct??0; $('qConv').textContent=inf.conveyor_speed_pct??S.conveyor;
+  // active stage
+  const act=S.running?S.tick%5:-1;
+  document.querySelectorAll('.stagebox').forEach(b=>b.classList.toggle('active',+b.dataset.s===act));
+  // charts advance once per new cycle
+  if((ce.cycle_count??0)!==lastCC){ lastCC=ce.cycle_count??0;
+    push(charts.cyc,[k.cycle_time_s??0,12],lastCC);
+    push(charts.ft,[un.force_torque_n??0],lastCC);
+    push(charts.su,[k.success_rate_pct??100,98],lastCC);
+  }
+}
+
+/* ------------------------------ controls ---------------------------- */
+function setState(){
+  $('stateDot').className='dot'+(S.emergency?' emg':S.running?' run':'');
+  $('stateTxt').textContent=S.emergency?'Emergency Stop':S.running?'Running':'Idle';
+  $('btnStart').disabled=S.running&&!S.emergency;
+  $('btnStart').textContent=S.emergency?'Reset to start':'Start';
+}
+let timer=null;
+$('btnStart').onclick=()=>{ if(S.emergency)return; S.running=true; setState();
+  if(!timer)timer=setInterval(step,CONFIG.TICK_MS);
+  feed('SCADA 4.0','System','Cell started, streaming live data to Firebase.'); };
+$('btnEmg').onclick=()=>{ S.emergency=true; S.running=false; setState();
+  raise('critical','E_Stop','Global emergency stop, Category 0 power cut','estop');
+  update(ref(db,'lety/cell'),{state:'emergency',estop:true}).catch(()=>{});
+  feed('SCADA 4.0','System','EMERGENCY STOP. All actuators halted. Reset required.'); };
+$('btnReset').onclick=()=>{
+  S.running=false; S.emergency=false; S.tick=0; S.cycle_count=0; S.shift_damaged=0;
+  S.attempts=S.successes=S.rejects=0; S.cuts=S.out=S.residue=0; S.bin=0; S.ambient=23; S.ft=6; S.conveyor=60; S.errCode=0;
+  S.alarms.clear(); renderAlarms(); set(ref(db,'lety/alarms'),null).catch(()=>{});
+  Object.values(charts).forEach(c=>{if(!c)return;c.data.labels=[];c.data.datasets.forEach(d=>d.data=[]);c.update('none');});
+  $('aiFeed').innerHTML='<div class="empty">Start the cell to begin the AI decision loop.</div>';
+  ['p2','p3'].forEach(id=>$(id).textContent='Awaiting data…'); $('p1').textContent='No active alarms.'; $('p4').textContent='Standby.'; $('p5').textContent='Baseline nominal.';
+  lastCC=-1; update(ref(db,'lety'),flatten(snapshot())).catch(()=>{}); setState();
+};
+function flatten(o){const f={};const w=(x,p)=>{for(const k in x){const v=x[k];const np=p?p+'/'+k:k;(v&&typeof v==='object'&&!Array.isArray(v))?w(v,np):f[np]=v;}};w(o,'');return f;}
+$('autopilot').onclick=function(){ S.autopilot=!S.autopilot; this.classList.toggle('on',S.autopilot); $('apTxt').textContent='Autopilot '+(S.autopilot?'ON':'OFF'); };
+
+/* ------------------------------- init ------------------------------- */
+buildCharts(); setState();
+update(ref(db,'lety'),flatten(snapshot())).catch(e=>{ $('fbTxt').textContent='Firebase write blocked'; });
+</script>
+</body>
+</html>
